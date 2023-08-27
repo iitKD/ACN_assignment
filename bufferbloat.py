@@ -125,7 +125,9 @@ def start_iperf(net):
     # TODO: Start the iperf client on h1.  Ensure that you create a
     # long lived TCP flow. You may need to redirect iperf's stdout to avoid blocking.
     h1 = net.get('h1')
-    h1.popen("iperf -c %s -t %s > %s/iperf.out" % (h2.IP(), args.time, args.dir), shell=True)
+    time = args.time
+    print "Starting iperf client and tcp flow for %ss" % time
+    h1.popen("iperf -c %s -t %s > %s/iperf.out" % (h2.IP(), time, args.dir), shell=True)
 
 
 def start_webserver(net):
@@ -135,19 +137,14 @@ def start_webserver(net):
     return [proc]
 
 def start_ping(net):
-    # TODO: Start a ping train from h1 to h2 (or h2 to h1, does it
-    # matter?)  Measure RTTs every 0.1 second.  Read the ping man page
-    # to see how to do this.
-
-    # Hint: Use host.popen(cmd, shell=True).  If you pass shell=True
-    # to popen, you can redirect cmd's output using shell syntax.
-    # i.e. ping ... > /path/to/ping.txt
-    # Note that if the command prints out a lot of text to stdout, it will block
-    # until stdout is read. You can avoid this by runnning popen.communicate() or
-    # redirecting stdout
-    h1 = net.get('h1')
-    h2 = net.get('h2')
-    popen = h1.popen("ping -i 0.1 %s > %s/ping.txt"%(h2.IP(), args.dir), shell=True)
+    print "Starting ping from h1 to h2, 10 times a sec"
+    h1 = net.get("h1")
+    h2 = net.get("h2")
+    # Sending ping for 10 * time packets
+    time = args.time
+    h1.popen("ping -c %s -i 0.1 %s > %s/ping.txt" % \
+        (time * 10, h2.IP(), args.dir), shell=True)
+    return
 
 def bufferbloat():
     if not os.path.exists(args.dir):
@@ -196,28 +193,28 @@ def bufferbloat():
     # spawned on host h1 (not from google!)
     # Hint: have a separate function to do this and you may find the
     # loop below useful.
+    measureDowloadTime  = []
     start_time = time()
-    measureTime = []
     while True:
-        # do the measurement (say) 3 times.
-        sleep(1)
+        sleep(5)
         now = time()
         delta = now - start_time
         if delta > args.time:
             break
         print "%.1fs left..." % (args.time - delta)
-
         h1 = net.get('h1')
         h2 = net.get('h2')
         for i in range(3):
-            webTime = h2.popen('curl -o /dev/null -s -w %%{time_total} %s/http/index.html' % h1.IP()).communicate()[0]
-            measureTime.append(float(webTime))
-        sleep(5)
-
+            download_time = h2.popen('curl -o /dev/null -s -w %%{time_total} %s/http/index.html' % h1.IP()).communicate()[0]
+            measureDowloadTime.append(float(download_time))
     # TODO: compute average (and standard deviation) of the fetch
     # times.  You don't need to plot them.  Just note it in your
     # README and explain.
+    dt = np.array(measureDowloadTime).astype(np.float)
+    print "Mean of Download time: %lf \n" % np.mean(dt)
+    print "Standard deviation for download time: %lf \n" % np.std(dt)
 
+  
     stop_tcpprobe()
     if qmon is not None:
         qmon.terminate()
