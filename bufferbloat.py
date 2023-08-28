@@ -88,8 +88,8 @@ class BBTopo(Topo):
                       delay=args.delay,
                       max_queue_size=args.maxq)
         
-        self.addLink(hosts[1],
-                      switch,
+        self.addLink(switch,
+                      hosts[1],
                       bw=args.bw_net,
                       delay=args.delay,
                       max_queue_size=args.maxq)
